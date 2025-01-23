@@ -96,6 +96,25 @@ namespace API.Controllers
             return CreatedAtAction("GetUsuario", new { id = usuario.Id }, usuario);
         }
 
+        [HttpPost("Login")]
+        public async Task<ActionResult<Usuario>> Login(LoginDTO loginDTO)
+        {
+            var usuario = await _context.Usarios.SingleOrDefaultAsync(x => x.UserName == loginDTO.UserName);
+            if(usuario == null)
+            {
+                return Unauthorized("Invalid UserName");
+            }
+            using var hmac = new System.Security.Cryptography.HMACSHA512(usuario.PasswordSalt);
+            var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(loginDTO.Password));
+            for (int i = 0; i < computedHash.Length; i++)
+            {
+                if (computedHash[i] != usuario.PasswordHash[i])
+                {
+                    return Unauthorized("Invalid Password");
+                }
+            }
+            return usuario;
+        }
         // DELETE: api/Usuario/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUsuario(int id)
