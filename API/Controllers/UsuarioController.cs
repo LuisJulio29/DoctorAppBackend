@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Data;
 using Models.Entities;
+using Models.DTOs;
 
 namespace API.Controllers
 {
@@ -73,11 +74,22 @@ namespace API.Controllers
             return NoContent();
         }
 
-        // POST: api/Usuario
+        // POST: api/Usuario/Register
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Usuario>> PostUsuario(Usuario usuario)
+        [HttpPost("Register")]
+        public async Task<ActionResult<Usuario>> PostUsuario(RegisterDTO registerDTO)
         {
+            if(await UsuarioExists(registerDTO.UserName))
+            {
+                return BadRequest("UserName already exists");
+            }
+            using var hmac = new System.Security.Cryptography.HMACSHA512();
+            var usuario = new Usuario
+            {
+                UserName = registerDTO.UserName.ToLower(),
+                PasswordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(registerDTO.Password)),
+                PasswordSalt = hmac.Key
+            };
             _context.Usarios.Add(usuario);
             await _context.SaveChangesAsync();
 
@@ -103,6 +115,10 @@ namespace API.Controllers
         private bool UsuarioExists(int id)
         {
             return _context.Usarios.Any(e => e.Id == id);
+        }
+        private async Task<bool> UsuarioExists(string username)
+        {
+            return await _context.Usarios.AnyAsync(e => e.UserName == username.ToLower());
         }
     }
 }
