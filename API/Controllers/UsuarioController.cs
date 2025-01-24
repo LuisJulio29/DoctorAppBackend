@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Data;
 using Models.Entities;
 using Models.DTOs;
+using Data.Interfaces;
 
 namespace API.Controllers
 {
@@ -16,10 +17,12 @@ namespace API.Controllers
     public class UsuarioController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ITokenService _tokenService;
 
-        public UsuarioController(ApplicationDbContext context)
+        public UsuarioController(ApplicationDbContext context,ITokenService tokenService)
         {
             _context = context;
+            _tokenService = tokenService;
         }
 
         // GET: api/Usuario
@@ -77,7 +80,7 @@ namespace API.Controllers
         // POST: api/Usuario/Register
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost("Register")]
-        public async Task<ActionResult<Usuario>> PostUsuario(RegisterDTO registerDTO)
+        public async Task<ActionResult<UserDTO>> PostUsuario(RegisterDTO registerDTO)
         {
             if(await UsuarioExists(registerDTO.UserName))
             {
@@ -92,12 +95,15 @@ namespace API.Controllers
             };
             _context.Usarios.Add(usuario);
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetUsuario", new { id = usuario.Id }, usuario);
+            return new UserDTO
+            {
+                UserName = usuario.UserName,
+                Token = _tokenService.CreateToken(usuario)
+            };
         }
 
         [HttpPost("Login")]
-        public async Task<ActionResult<Usuario>> Login(LoginDTO loginDTO)
+        public async Task<ActionResult<UserDTO>> Login(LoginDTO loginDTO)
         {
             var usuario = await _context.Usarios.SingleOrDefaultAsync(x => x.UserName == loginDTO.UserName);
             if(usuario == null)
@@ -113,7 +119,11 @@ namespace API.Controllers
                     return Unauthorized("Invalid Password");
                 }
             }
-            return usuario;
+            return new ActionResult<UserDTO>(new UserDTO
+            {
+                UserName = usuario.UserName,
+                Token = _tokenService.CreateToken(usuario)
+            });
         }
         // DELETE: api/Usuario/5
         [HttpDelete("{id}")]
