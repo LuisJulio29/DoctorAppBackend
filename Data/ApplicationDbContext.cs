@@ -14,6 +14,6 @@ namespace Data
         {
         }
 
-        public DbSet<Usuario> Usarios { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
     }
 }
